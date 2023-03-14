@@ -16,7 +16,7 @@ fi
 : ${ZBX_SERVER_PORT:="10051"}
 
 # Default timezone for web interface
-: ${PHP_TZ:="Europe/Riga"}
+: ${PHP_TZ:="Europe/Moscow"}
 
 # Default directories
 # Configuration files directory
