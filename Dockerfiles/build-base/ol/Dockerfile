@@ -41,7 +41,11 @@ RUN set -eux && \
             java-1.8.0-openjdk-devel \
             git \
             gettext \
-            unixODBC-devel" && \
+            unixODBC-devel \
+            oracle-instantclient-basic \
+            oracle-instantclient-devel \
+            oracle-instantclient-sqlplus" && \
+    microdnf -y install oracle-instantclient-release-el8 && \
     microdnf -y module enable mysql && \
     microdnf module enable postgresql:13 && \
     microdnf -y install \
@@ -49,6 +53,7 @@ RUN set -eux && \
         --enablerepo "ol8_baseos_latest" \
         --enablerepo "ol8_appstream" \
         --enablerepo "ol8_codeready_builder" \
+        --enablerepo "ol8_oracle_instantclient21" \
         --setopt=install_weak_deps=0 \
         --best \
         --nodocs ${INSTALL_PKGS} && \
