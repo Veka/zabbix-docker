@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 ARG MAJOR_VERSION=6.4
 ARG ZBX_VERSION=${MAJOR_VERSION}
-ARG BUILD_BASE_IMAGE=zabbix-build-pgsql:ol-${ZBX_VERSION}.0
+ARG BUILD_BASE_IMAGE=zabbix-build-oracle:ol-${ZBX_VERSION}.0
 
 FROM ${BUILD_BASE_IMAGE} as builder
 
@@ -42,9 +42,9 @@ RUN set -eux && \
             php-json \
             php-ldap \
             php-mbstring \
-            php-pgsql \
+            # php-pgsql \
             php-xml \
-            postgresql \
+            # postgresql \
             supervisor" && \
     microdnf -y module enable php:8.0 && \
     microdnf module enable postgresql:13 && \
