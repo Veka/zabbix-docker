@@ -42,10 +42,11 @@ RUN set -eux && \
             git \
             gettext \
             unixODBC-devel \
+            openssl3-devel \
             oracle-instantclient-basic \
             oracle-instantclient-devel \
             oracle-instantclient-sqlplus" && \
-    microdnf -y install oracle-instantclient-release-el8 && \
+    microdnf -y install oracle-epel-release-el8 oracle-instantclient-release-el8 && \
     microdnf -y module enable mysql && \
     microdnf module enable postgresql:13 && \
     microdnf -y install \
@@ -53,6 +54,7 @@ RUN set -eux && \
         --enablerepo "ol8_baseos_latest" \
         --enablerepo "ol8_appstream" \
         --enablerepo "ol8_codeready_builder" \
+        --enablerepo "ol8_developer_EPEL" \
         --enablerepo "ol8_oracle_instantclient21" \
         --setopt=install_weak_deps=0 \
         --best \

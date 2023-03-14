@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 ARG MAJOR_VERSION=6.4
 ARG ZBX_VERSION=${MAJOR_VERSION}
-ARG BUILD_BASE_IMAGE=zabbix-build-oracle:ol-${ZBX_VERSION}
+ARG BUILD_BASE_IMAGE=zabbix-build-oracle:ol-${ZBX_VERSION}.0
 
 FROM ${BUILD_BASE_IMAGE} as builder
 
