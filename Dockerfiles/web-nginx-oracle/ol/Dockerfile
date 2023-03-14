@@ -47,7 +47,7 @@ RUN set -eux && \
             # postgresql \
             supervisor" && \
     microdnf -y module enable php:8.0 && \
-    microdnf module enable postgresql:13 && \
+    # microdnf module enable postgresql:13 && \
     microdnf -y install \
             --disablerepo="*" \
             --enablerepo="ol8_baseos_latest" \
@@ -77,13 +77,13 @@ RUN set -eux && \
     rm -f /etc/nginx/conf.d/*.conf  && \
     rm -f /etc/php-fpm.d/www.conf && \
     cd /usr/share/zabbix/ && \
-    rm -f conf/zabbix.conf.php conf/maintenance.inc.php conf/zabbix.conf.php.example && \
-    rm -rf tests && \
-    rm -f locale/add_new_language.sh locale/update_po.sh locale/make_mo.sh && \
-    find /usr/share/zabbix/locale -name '*.po' | xargs rm -f && \
-    find /usr/share/zabbix/locale -name '*.sh' | xargs rm -f && \
-    ln -s "/etc/zabbix/web/zabbix.conf.php" "/usr/share/zabbix/conf/zabbix.conf.php" && \
-    ln -s "/etc/zabbix/web/maintenance.inc.php" "/usr/share/zabbix/conf/maintenance.inc.php" && \
+    # rm -f conf/zabbix.conf.php conf/maintenance.inc.php conf/zabbix.conf.php.example && \
+    # rm -rf tests && \
+    # rm -f locale/add_new_language.sh locale/update_po.sh locale/make_mo.sh && \
+    # find /usr/share/zabbix/locale -name '*.po' | xargs rm -f && \
+    # find /usr/share/zabbix/locale -name '*.sh' | xargs rm -f && \
+    # ln -s "/etc/zabbix/web/zabbix.conf.php" "/usr/share/zabbix/conf/zabbix.conf.php" && \
+    # ln -s "/etc/zabbix/web/maintenance.inc.php" "/usr/share/zabbix/conf/maintenance.inc.php" && \
     cat /usr/share/zabbix/include/locales.inc.php | grep display | grep true | awk '{$1=$1};1' | \
         cut -d"'" -f 2 | sort | \
         xargs -I '{}' bash -c 'echo "{}" && localedef -c -i {} -f UTF-8 {}.UTF-8 2>/dev/null' && \

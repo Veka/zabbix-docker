@@ -9,9 +9,6 @@ if [ "${DEBUG_MODE,,}" == "true" ]; then
     set -o xtrace
 fi
 
-#Enable PostgreSQL timescaleDB feature:
-: ${ENABLE_TIMESCALEDB:="false"}
-
 # Default directories
 # User 'zabbix' home directory
 ZABBIX_USER_HOME_DIR="/var/lib/zabbix"
@@ -137,28 +134,24 @@ update_config_multiple_var() {
     done
 }
 
-# Check prerequisites for PostgreSQL database
-check_variables_postgresql() {
-    file_env POSTGRES_USER
-    file_env POSTGRES_PASSWORD
+# Check prerequisites for Oracle database
+check_variables_oracle() {
+    file_env ORACLE_USER
+    file_env ORACLE_PASSWORD
 
-    : ${DB_SERVER_HOST:="postgres-server"}
-    : ${DB_SERVER_PORT:="5432"}
+    : ${DB_SERVER_HOST:="oracle-server"}
+    : ${DB_SERVER_PORT:="1521"}
 
-    DB_SERVER_ROOT_USER=${POSTGRES_USER:-"postgres"}
-    DB_SERVER_ROOT_PASS=${POSTGRES_PASSWORD:-""}
+    DB_SERVER_ROOT_USER=${ORACLE_USER:-"zabbix"}
+    DB_SERVER_ROOT_PASS=${ORACLE_PASSWORD:-""}
 
-    DB_SERVER_ZBX_USER=${POSTGRES_USER:-"zabbix"}
-    DB_SERVER_ZBX_PASS=${POSTGRES_PASSWORD:-"zabbix"}
+    DB_SERVER_ZBX_USER=${ORACLE_USER:-"zabbix"}
+    DB_SERVER_ZBX_PASS=${ORACLE_PASSWORD:-"zabbix"}
 
-    : ${DB_SERVER_SCHEMA:="public"}
-
-    DB_SERVER_DBNAME=${POSTGRES_DB:-"zabbix"}
-
-    : ${POSTGRES_USE_IMPLICIT_SEARCH_PATH:="false"}
+    DB_SERVER_DBNAME=${ORACLE_DB:-"zabbix"}
 }
 
-check_db_connect_postgresql() {
+check_db_connect_oracle() {
     echo "********************"
     echo "* DB_SERVER_HOST: ${DB_SERVER_HOST}"
     echo "* DB_SERVER_PORT: ${DB_SERVER_PORT}"
@@ -176,11 +169,6 @@ check_db_connect_postgresql() {
 
     WAIT_TIMEOUT=5
 
-    if [ "${POSTGRES_USE_IMPLICIT_SEARCH_PATH,,}" == "false" ] && [ -n "${DB_SERVER_SCHEMA}" ]; then
-        PGOPTIONS="--search_path=${DB_SERVER_SCHEMA}"
-        export PGOPTIONS
-    fi
-
     if [ -n "${ZBX_DBTLSCONNECT}" ]; then
         PGSSLMODE=${ZBX_DBTLSCONNECT//_/-}
         export PGSSLMODE=${PGSSLMODE//required/require}
@@ -189,14 +177,14 @@ check_db_connect_postgresql() {
         export PGSSLKEY=${ZBX_DBTLSKEYFILE}
     fi
 
-    while true :
-    do
-        psql --host ${DB_SERVER_HOST} --port ${DB_SERVER_PORT} --username ${DB_SERVER_ROOT_USER} --list --quiet 1>/dev/null 2>&1 && break
-        psql --host ${DB_SERVER_HOST} --port ${DB_SERVER_PORT} --username ${DB_SERVER_ROOT_USER} --list --dbname ${DB_SERVER_DBNAME} --quiet 1>/dev/null 2>&1 && break
+    # while true :
+    # do
+    #     psql --host ${DB_SERVER_HOST} --port ${DB_SERVER_PORT} --username ${DB_SERVER_ROOT_USER} --list --quiet 1>/dev/null 2>&1 && break
+    #     psql --host ${DB_SERVER_HOST} --port ${DB_SERVER_PORT} --username ${DB_SERVER_ROOT_USER} --list --dbname ${DB_SERVER_DBNAME} --quiet 1>/dev/null 2>&1 && break
 
-        echo "**** PostgreSQL server is not available. Waiting $WAIT_TIMEOUT seconds..."
-        sleep $WAIT_TIMEOUT
-    done
+    #     echo "**** Oracle server is not available. Waiting $WAIT_TIMEOUT seconds..."
+    #     sleep $WAIT_TIMEOUT
+    # done
 
     unset PGPASSWORD
     unset PGOPTIONS
@@ -216,11 +204,6 @@ psql_query() {
         export PGPASSWORD="${DB_SERVER_ZBX_PASS}"
     fi
 
-    if [ "${POSTGRES_USE_IMPLICIT_SEARCH_PATH,,}" == "false" ] && [ -n "${DB_SERVER_SCHEMA}" ]; then
-        PGOPTIONS="--search_path=${DB_SERVER_SCHEMA}"
-        export PGOPTIONS
-    fi
-
     if [ -n "${ZBX_DBTLSCONNECT}" ]; then
         PGSSLMODE=${ZBX_DBTLSCONNECT//_/-}
         export PGSSLMODE=${PGSSLMODE//required/require}
@@ -229,8 +212,8 @@ psql_query() {
         export PGSSLKEY=${ZBX_DBTLSKEYFILE}
     fi
 
-    result=$(psql --no-align --quiet --tuples-only --host "${DB_SERVER_HOST}" --port "${DB_SERVER_PORT}" \
-             --username "${DB_SERVER_ROOT_USER}" --command "$query" --dbname "$db" 2>/dev/null);
+    # result=$(psql --no-align --quiet --tuples-only --host "${DB_SERVER_HOST}" --port "${DB_SERVER_PORT}" \
+    #          --username "${DB_SERVER_ROOT_USER}" --command "$query" --dbname "$db" 2>/dev/null);
 
     unset PGPASSWORD
     unset PGOPTIONS
@@ -249,11 +232,6 @@ exec_sql_file() {
 
     if [ -n "${DB_SERVER_ZBX_PASS}" ]; then
         export PGPASSWORD="${DB_SERVER_ZBX_PASS}"
-    fi
-
-    if [ "${POSTGRES_USE_IMPLICIT_SEARCH_PATH,,}" == "false" ] && [ -n "${DB_SERVER_SCHEMA}" ]; then
-        PGOPTIONS="--search_path=${DB_SERVER_SCHEMA}"
-        export PGOPTIONS
     fi
 
     if [ -n "${ZBX_DBTLSCONNECT}" ]; then
@@ -280,7 +258,7 @@ exec_sql_file() {
     unset PGSSLKEY
 }
 
-create_db_database_postgresql() {
+create_db_database_oracle() {
     DB_EXISTS=$(psql_query "SELECT 1 AS result FROM pg_database WHERE datname='${DB_SERVER_DBNAME}'" "${DB_SERVER_DBNAME}")
 
     if [ -z ${DB_EXISTS} ]; then
@@ -288,11 +266,6 @@ create_db_database_postgresql() {
 
         if [ -n "${DB_SERVER_ZBX_PASS}" ]; then
             export PGPASSWORD="${DB_SERVER_ZBX_PASS}"
-        fi
-
-        if [ "${POSTGRES_USE_IMPLICIT_SEARCH_PATH,,}" == "false" ] && [ -n "${DB_SERVER_SCHEMA}" ]; then
-            PGOPTIONS="--search_path=${DB_SERVER_SCHEMA}"
-            export PGOPTIONS
         fi
 
         if [ -n "${ZBX_DBTLSCONNECT}" ]; then
@@ -330,7 +303,7 @@ apply_db_scripts() {
     done
 }
 
-create_db_schema_postgresql() {
+create_db_schema_oracle() {
     DBVERSION_TABLE_EXISTS=$(psql_query "SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = 
                                          c.relnamespace WHERE  n.nspname = '$DB_SERVER_SCHEMA' AND c.relname = 'dbversion'" "${DB_SERVER_DBNAME}")
 
@@ -340,17 +313,9 @@ create_db_schema_postgresql() {
     fi
 
     if [ -z "${ZBX_DB_VERSION}" ]; then
-        echo "** Creating '${DB_SERVER_DBNAME}' schema in PostgreSQL"
+        echo "** Creating '${DB_SERVER_DBNAME}' schema in Oracle"
 
-        if [ "${ENABLE_TIMESCALEDB,,}" == "true" ]; then
-            psql_query "CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;" "${DB_SERVER_DBNAME}"
-        fi
-
-        exec_sql_file "/usr/share/doc/zabbix-server-postgresql/create.sql.gz"
-
-        if [ "${ENABLE_TIMESCALEDB,,}" == "true" ]; then
-            exec_sql_file "/usr/share/doc/zabbix-server-postgresql/timescaledb.sql"
-        fi
+        exec_sql_file "/usr/share/doc/zabbix-server-oracle/create.sql.gz"
 
         apply_db_scripts "/usr/lib/zabbix/dbscripts/*.sql"
         apply_db_scripts "/var/lib/zabbix/dbscripts/*.sql"
@@ -562,10 +527,10 @@ update_zbx_config() {
 prepare_db() {
     echo "** Preparing database"
 
-    check_variables_postgresql
-    check_db_connect_postgresql
-    create_db_database_postgresql
-    create_db_schema_postgresql
+    check_variables_oracle
+    # check_db_connect_oracle
+    # create_db_database_oracle
+    # create_db_schema_oracle
 }
 
 prepare_server() {
