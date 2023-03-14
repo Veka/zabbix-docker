@@ -29,7 +29,6 @@ RUN set -eux && \
             libevent-devel \
             libssh-devel \
             libxml2-devel \
-            openssl-devel \
             openldap-devel \
             make \
             mysql-devel \
@@ -42,11 +41,14 @@ RUN set -eux && \
             git \
             gettext \
             unixODBC-devel \
+            # openssl-devel \
             openssl3-devel \
+            php-devel \
             oracle-instantclient-basic \
             oracle-instantclient-devel \
             oracle-instantclient-sqlplus" && \
     microdnf -y install oracle-epel-release-el8 oracle-instantclient-release-el8 && \
+    microdnf -y module enable php:8.0 && \
     microdnf -y module enable mysql && \
     microdnf module enable postgresql:13 && \
     microdnf -y install \
@@ -59,6 +61,12 @@ RUN set -eux && \
         --setopt=install_weak_deps=0 \
         --best \
         --nodocs ${INSTALL_PKGS} && \
+    curl -fsSL https://pecl.php.net/get/oci8-3.0.1.tgz | tar -zx && \
+    cd oci8-3.0.1 && \
+    export LD_LIBRARY_PATH=/usr/lib/oracle/21/client64/lib && \
+    phpize && \
+    ./configure -with-oci8=shared,instantclient,/usr/lib/oracle/21/client64/lib && \
+    make install && \
     microdnf -y clean all && \
     rm -rf /var/cache/yum /var/lib/yum/yumdb/* /usr/lib/udev/hwdb.d/* && \
     rm -rf /var/cache/dnf /etc/udev/hwdb.bin /root/.pki

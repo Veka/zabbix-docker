@@ -12,7 +12,8 @@ ARG ZBX_VERSION
 ARG ZBX_SOURCES=https://git.zabbix.com/scm/zbx/zabbix.git
 
 ENV TERM=xterm \
-    ZBX_VERSION=${ZBX_VERSION} ZBX_SOURCES=${ZBX_SOURCES}
+    ZBX_VERSION=${ZBX_VERSION} ZBX_SOURCES=${ZBX_SOURCES} \
+    LD_LIBRARY_PATH=/usr/lib/oracle/21/client64/lib
 
 LABEL org.opencontainers.image.authors="Alexey Pustovalov <alexey.pustovalov@zabbix.com>" \
       org.opencontainers.image.description="Zabbix web-interface based on Nginx web server with Oracle database support" \
@@ -27,6 +28,8 @@ LABEL org.opencontainers.image.authors="Alexey Pustovalov <alexey.pustovalov@zab
 STOPSIGNAL SIGTERM
 
 COPY --from=builder ["/tmp/zabbix-${ZBX_VERSION}/ui", "/usr/share/zabbix"]
+COPY --from=builder ["/usr/lib64/php/modules/", "/usr/lib64/php/modules/"]
+COPY --from=builder ["/usr/lib/oracle/21/client64/", "/usr/lib/oracle/21/client64/"]
 COPY ["conf/etc/", "/etc/"]
 COPY ["conf/etc/yum.repos.d/oracle-epel-ol8.repo", "/etc/yum.repos.d/oracle-epel-ol8.repo"]
 
@@ -42,12 +45,10 @@ RUN set -eux && \
             php-json \
             php-ldap \
             php-mbstring \
-            # php-pgsql \
             php-xml \
-            # postgresql \
+            libaio \
             supervisor" && \
     microdnf -y module enable php:8.0 && \
-    # microdnf module enable postgresql:13 && \
     microdnf -y install \
             --disablerepo="*" \
             --enablerepo="ol8_baseos_latest" \
@@ -57,6 +58,7 @@ RUN set -eux && \
             --best \
             --nodocs \
         ${INSTALL_PKGS} && \
+    echo extension=oci8.so > /etc/php.d/instantclient.ini && \
     groupadd \
             --system \
             --gid 1995 \
