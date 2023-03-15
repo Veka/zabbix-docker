@@ -29,9 +29,10 @@ STOPSIGNAL SIGTERM
 
 COPY --from=builder ["/tmp/zabbix-${ZBX_VERSION}/ui", "/usr/share/zabbix"]
 COPY --from=builder ["/usr/lib64/php/modules/", "/usr/lib64/php/modules/"]
-COPY --from=builder ["/usr/lib/oracle/21/client64/", "/usr/lib/oracle/21/client64/"]
 COPY ["conf/etc/", "/etc/"]
-COPY ["conf/etc/yum.repos.d/oracle-epel-ol8.repo", "/etc/yum.repos.d/oracle-epel-ol8.repo"]
+# COPY ["conf/etc/yum.repos.d/oracle-epel-ol8.repo", "/etc/yum.repos.d/oracle-epel-ol8.repo"]
+# COPY ["conf/etc/yum.repos.d/oracle-instantclient-ol8.repo", "/etc/yum.repos.d/oracle-instantclient-ol8.repo"]
+
 
 RUN set -eux && \
     INSTALL_PKGS="bash \
@@ -47,6 +48,8 @@ RUN set -eux && \
             php-mbstring \
             php-xml \
             libaio \
+            oracle-instantclient-basic \
+            oracle-instantclient-sqlplus \
             supervisor" && \
     microdnf -y module enable php:8.0 && \
     microdnf -y install \
@@ -54,11 +57,11 @@ RUN set -eux && \
             --enablerepo="ol8_baseos_latest" \
             --enablerepo="ol8_appstream" \
             --enablerepo="ol8_developer_EPEL" \
+            --enablerepo "ol8_oracle_instantclient21" \
             --setopt=install_weak_deps=0 \
             --best \
             --nodocs \
         ${INSTALL_PKGS} && \
-    echo extension=oci8.so > /etc/php.d/instantclient.ini && \
     groupadd \
             --system \
             --gid 1995 \
@@ -79,13 +82,13 @@ RUN set -eux && \
     rm -f /etc/nginx/conf.d/*.conf  && \
     rm -f /etc/php-fpm.d/www.conf && \
     cd /usr/share/zabbix/ && \
-    # rm -f conf/zabbix.conf.php conf/maintenance.inc.php conf/zabbix.conf.php.example && \
-    # rm -rf tests && \
-    # rm -f locale/add_new_language.sh locale/update_po.sh locale/make_mo.sh && \
-    # find /usr/share/zabbix/locale -name '*.po' | xargs rm -f && \
-    # find /usr/share/zabbix/locale -name '*.sh' | xargs rm -f && \
-    # ln -s "/etc/zabbix/web/zabbix.conf.php" "/usr/share/zabbix/conf/zabbix.conf.php" && \
-    # ln -s "/etc/zabbix/web/maintenance.inc.php" "/usr/share/zabbix/conf/maintenance.inc.php" && \
+    rm -f conf/zabbix.conf.php conf/maintenance.inc.php conf/zabbix.conf.php.example && \
+    rm -rf tests && \
+    rm -f locale/add_new_language.sh locale/update_po.sh locale/make_mo.sh && \
+    find /usr/share/zabbix/locale -name '*.po' | xargs rm -f && \
+    find /usr/share/zabbix/locale -name '*.sh' | xargs rm -f && \
+    ln -s "/etc/zabbix/web/zabbix.conf.php" "/usr/share/zabbix/conf/zabbix.conf.php" && \
+    ln -s "/etc/zabbix/web/maintenance.inc.php" "/usr/share/zabbix/conf/maintenance.inc.php" && \
     cat /usr/share/zabbix/include/locales.inc.php | grep display | grep true | awk '{$1=$1};1' | \
         cut -d"'" -f 2 | sort | \
         xargs -I '{}' bash -c 'echo "{}" && localedef -c -i {} -f UTF-8 {}.UTF-8 2>/dev/null' && \

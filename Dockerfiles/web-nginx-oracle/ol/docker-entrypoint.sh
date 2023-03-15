@@ -80,31 +80,12 @@ check_db_connect() {
     fi
     echo "********************"
 
-    if [ -n "${DB_SERVER_ZBX_PASS}" ]; then
-        export PGPASSWORD="${DB_SERVER_ZBX_PASS}"
-    fi
-
     WAIT_TIMEOUT=5
 
-    if [ -n "${ZBX_DBTLSCONNECT}" ]; then
-        PGSSLMODE=${ZBX_DBTLSCONNECT//_/-}
-        export PGSSLMODE=${PGSSLMODE//required/require}
-        export PGSSLROOTCERT=${ZBX_DBTLSCAFILE}
-        export PGSSLCERT=${ZBX_DBTLSCERTFILE}
-        export PGSSLKEY=${ZBX_DBTLSKEYFILE}
-    fi
-
-    # while [ ! "$(psql --host ${DB_SERVER_HOST} --port ${DB_SERVER_PORT} --username ${DB_SERVER_ZBX_USER} --dbname ${DB_SERVER_DBNAME} --list --quiet 2>/dev/null)" ]; do
-    #     echo "**** PostgreSQL server is not available. Waiting $WAIT_TIMEOUT seconds..."
-    #     sleep $WAIT_TIMEOUT
-    # done
-
-    unset PGPASSWORD
-    unset PGOPTIONS
-    unset PGSSLMODE
-    unset PGSSLROOTCERT
-    unset PGSSLCERT
-    unset PGSSLKEY
+    while [ "$(echo "exit"|sqlplus -s -L ${DB_SERVER_ZBX_USER}/${DB_SERVER_ZBX_PASS}@//${DB_SERVER_HOST}:${DB_SERVER_PORT}/${DB_SERVER_DBNAME}>/dev/null)" ]; do
+        echo "**** Oracle server is not available. Waiting $WAIT_TIMEOUT seconds..."
+        sleep $WAIT_TIMEOUT
+    done
 }
 
 prepare_web_server() {
