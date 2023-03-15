@@ -203,7 +203,7 @@ apply_db_scripts() {
 create_db_schema_oracle() {
     DB_SCHEMA_EXISTS=$(oracle_query "SELECT CASE WHEN count(*)>0 THEN 1 END CASE FROM widget_field;")
 
-    if [ "${DB_SCHEMA_EXISTS}" -ne 1 ]; then
+    if [ "${DB_SCHEMA_EXISTS}" -ne "1" ]; then
         echo "** Creating '${DB_SERVER_DBNAME}' schema in Oracle"
 
         exec_sql_file "/usr/share/doc/zabbix-server-oracle/create.sql.gz"
