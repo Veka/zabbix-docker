@@ -32,7 +32,7 @@ COPY --from=builder ["/tmp/zabbix-${ZBX_VERSION}/src/zabbix_get/zabbix_get", "/u
 COPY --from=builder ["/tmp/zabbix-${ZBX_VERSION}/src/zabbix_sender/zabbix_sender", "/usr/bin/zabbix_sender"]
 COPY --from=builder ["/tmp/zabbix-${ZBX_VERSION}/conf/zabbix_server.conf", "/etc/zabbix/zabbix_server.conf"]
 COPY --from=builder ["/tmp/zabbix-${ZBX_VERSION}/database/oracle/create_server.sql.gz", "/usr/share/doc/zabbix-server-oracle/create.sql.gz"]
-COPY ["conf/etc/yum.repos.d/oracle-epel-ol8.repo", "/etc/yum.repos.d/oracle-epel-ol8.repo"]
+COPY ["conf/etc/", "/etc/"]
 
 RUN set -eux && \
     INSTALL_PKGS="fping \
@@ -52,9 +52,10 @@ RUN set -eux && \
             openldap \
             openssl-libs \
             pcre2 \
-            # postgresql \
-            # postgresql-libs \
             zlib \
+            libaio \
+            oracle-instantclient-basic \
+            oracle-instantclient-sqlplus \
             unixODBC" && \
     # microdnf module enable postgresql:13 && \
     microdnf -y install \
@@ -62,6 +63,7 @@ RUN set -eux && \
             --enablerepo="ol8_baseos_latest" \
             --enablerepo="ol8_appstream" \
             --enablerepo="ol8_developer_EPEL" \
+            --enablerepo "ol8_oracle_instantclient21" \
             --setopt=install_weak_deps=0 \
             --best \
             --nodocs \

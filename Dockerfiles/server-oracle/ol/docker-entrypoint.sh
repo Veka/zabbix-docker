@@ -156,72 +156,24 @@ check_db_connect_oracle() {
     echo "* DB_SERVER_HOST: ${DB_SERVER_HOST}"
     echo "* DB_SERVER_PORT: ${DB_SERVER_PORT}"
     echo "* DB_SERVER_DBNAME: ${DB_SERVER_DBNAME}"
-    echo "* DB_SERVER_SCHEMA: ${DB_SERVER_SCHEMA}"
     if [ "${DEBUG_MODE,,}" == "true" ]; then
         echo "* DB_SERVER_ZBX_USER: ${DB_SERVER_ZBX_USER}"
         echo "* DB_SERVER_ZBX_PASS: ${DB_SERVER_ZBX_PASS}"
     fi
     echo "********************"
 
-    if [ -n "${DB_SERVER_ZBX_PASS}" ]; then
-        export PGPASSWORD="${DB_SERVER_ZBX_PASS}"
-    fi
-
     WAIT_TIMEOUT=5
 
-    if [ -n "${ZBX_DBTLSCONNECT}" ]; then
-        PGSSLMODE=${ZBX_DBTLSCONNECT//_/-}
-        export PGSSLMODE=${PGSSLMODE//required/require}
-        export PGSSLROOTCERT=${ZBX_DBTLSCAFILE}
-        export PGSSLCERT=${ZBX_DBTLSCERTFILE}
-        export PGSSLKEY=${ZBX_DBTLSKEYFILE}
-    fi
-
-    # while true :
-    # do
-    #     psql --host ${DB_SERVER_HOST} --port ${DB_SERVER_PORT} --username ${DB_SERVER_ROOT_USER} --list --quiet 1>/dev/null 2>&1 && break
-    #     psql --host ${DB_SERVER_HOST} --port ${DB_SERVER_PORT} --username ${DB_SERVER_ROOT_USER} --list --dbname ${DB_SERVER_DBNAME} --quiet 1>/dev/null 2>&1 && break
-
-    #     echo "**** Oracle server is not available. Waiting $WAIT_TIMEOUT seconds..."
-    #     sleep $WAIT_TIMEOUT
-    # done
-
-    unset PGPASSWORD
-    unset PGOPTIONS
-    unset PGSSLMODE
-    unset PGSSLROOTCERT
-    unset PGSSLCERT
-    unset PGSSLKEY
+    while [ "$(echo "exit"|sqlplus -s -L ${DB_SERVER_ZBX_USER}/${DB_SERVER_ZBX_PASS}@//${DB_SERVER_HOST}:${DB_SERVER_PORT}/${DB_SERVER_DBNAME}>/dev/null)" ]; do
+        echo "**** Oracle server is not available. Waiting $WAIT_TIMEOUT seconds..."
+        sleep $WAIT_TIMEOUT
+    done
 }
 
-psql_query() {
+oracle_query() {
     query=$1
-    db=$2
-
     local result=""
-
-    if [ -n "${DB_SERVER_ZBX_PASS}" ]; then
-        export PGPASSWORD="${DB_SERVER_ZBX_PASS}"
-    fi
-
-    if [ -n "${ZBX_DBTLSCONNECT}" ]; then
-        PGSSLMODE=${ZBX_DBTLSCONNECT//_/-}
-        export PGSSLMODE=${PGSSLMODE//required/require}
-        export PGSSLROOTCERT=${ZBX_DBTLSCAFILE}
-        export PGSSLCERT=${ZBX_DBTLSCERTFILE}
-        export PGSSLKEY=${ZBX_DBTLSKEYFILE}
-    fi
-
-    # result=$(psql --no-align --quiet --tuples-only --host "${DB_SERVER_HOST}" --port "${DB_SERVER_PORT}" \
-    #          --username "${DB_SERVER_ROOT_USER}" --command "$query" --dbname "$db" 2>/dev/null);
-
-    unset PGPASSWORD
-    unset PGOPTIONS
-    unset PGSSLMODE
-    unset PGSSLROOTCERT
-    unset PGSSLCERT
-    unset PGSSLKEY
-
+    result=$(echo -e "set heading off\n$1\nexit\n" | sqlplus -s -L ${DB_SERVER_ZBX_USER}/${DB_SERVER_ZBX_PASS}@//${DB_SERVER_HOST}:${DB_SERVER_PORT}/${DB_SERVER_DBNAME} 2> /dev/null)
     echo $result
 }
 
@@ -230,66 +182,11 @@ exec_sql_file() {
 
     local command="cat"
 
-    if [ -n "${DB_SERVER_ZBX_PASS}" ]; then
-        export PGPASSWORD="${DB_SERVER_ZBX_PASS}"
-    fi
-
-    if [ -n "${ZBX_DBTLSCONNECT}" ]; then
-        PGSSLMODE=${ZBX_DBTLSCONNECT//_/-}
-        export PGSSLMODE=${PGSSLMODE//required/require}
-        export PGSSLROOTCERT=${ZBX_DBTLSCAFILE}
-        export PGSSLCERT=${ZBX_DBTLSCERTFILE}
-        export PGSSLKEY=${ZBX_DBTLSKEYFILE}
-    fi
-
     if [ "${sql_script: -3}" == ".gz" ]; then
         command="zcat"
     fi
 
-    $command $sql_script | psql --quiet \
-        --host "${DB_SERVER_HOST}" --port "${DB_SERVER_PORT}" \
-        --username "${DB_SERVER_ZBX_USER}" --dbname "${DB_SERVER_DBNAME}" 1>/dev/null || exit 1
-
-    unset PGPASSWORD
-    unset PGOPTIONS
-    unset PGSSLMODE
-    unset PGSSLROOTCERT
-    unset PGSSLCERT
-    unset PGSSLKEY
-}
-
-create_db_database_oracle() {
-    DB_EXISTS=$(psql_query "SELECT 1 AS result FROM pg_database WHERE datname='${DB_SERVER_DBNAME}'" "${DB_SERVER_DBNAME}")
-
-    if [ -z ${DB_EXISTS} ]; then
-        echo "** Database '${DB_SERVER_DBNAME}' does not exist. Creating..."
-
-        if [ -n "${DB_SERVER_ZBX_PASS}" ]; then
-            export PGPASSWORD="${DB_SERVER_ZBX_PASS}"
-        fi
-
-        if [ -n "${ZBX_DBTLSCONNECT}" ]; then
-            PGSSLMODE=${ZBX_DBTLSCONNECT//_/-}
-            export PGSSLMODE=${PGSSLMODE//required/require}
-            export PGSSLROOTCERT=${ZBX_DBTLSCAFILE}
-            export PGSSLCERT=${ZBX_DBTLSCERTFILE}
-            export PGSSLKEY=${ZBX_DBTLSKEYFILE}
-        fi
-
-        createdb --host "${DB_SERVER_HOST}" --port "${DB_SERVER_PORT}" --username "${DB_SERVER_ROOT_USER}" \
-                 --owner "${DB_SERVER_ZBX_USER}" --lc-ctype "en_US.utf8" --lc-collate "en_US.utf8" "${DB_SERVER_DBNAME}"
-
-        unset PGPASSWORD
-        unset PGOPTIONS
-        unset PGSSLMODE
-        unset PGSSLROOTCERT
-        unset PGSSLCERT
-        unset PGSSLKEY
-    else
-        echo "** Database '${DB_SERVER_DBNAME}' already exists. Please be careful with database owner!"
-    fi
-
-    psql_query "CREATE SCHEMA IF NOT EXISTS ${DB_SERVER_SCHEMA}" "${DB_SERVER_DBNAME}" 1>/dev/null
+    $command $sql_script | sqlplus -s -L ${DB_SERVER_ZBX_USER}/${DB_SERVER_ZBX_PASS}@//${DB_SERVER_HOST}:${DB_SERVER_PORT}/${DB_SERVER_DBNAME} 1>/dev/null || exit 1
 }
 
 apply_db_scripts() {
@@ -304,15 +201,9 @@ apply_db_scripts() {
 }
 
 create_db_schema_oracle() {
-    DBVERSION_TABLE_EXISTS=$(psql_query "SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = 
-                                         c.relnamespace WHERE  n.nspname = '$DB_SERVER_SCHEMA' AND c.relname = 'dbversion'" "${DB_SERVER_DBNAME}")
+    DB_SCHEMA_EXISTS=$(oracle_query "SELECT CASE WHEN count(*)>0 THEN 1 END CASE FROM widget_field;")
 
-    if [ -n "${DBVERSION_TABLE_EXISTS}" ]; then
-        echo "** Table '${DB_SERVER_DBNAME}.dbversion' already exists."
-        ZBX_DB_VERSION=$(psql_query "SELECT mandatory FROM ${DB_SERVER_SCHEMA}.dbversion" "${DB_SERVER_DBNAME}")
-    fi
-
-    if [ -z "${ZBX_DB_VERSION}" ]; then
+    if [ "${DB_SCHEMA_EXISTS}" -ne 1 ]; then
         echo "** Creating '${DB_SERVER_DBNAME}' schema in Oracle"
 
         exec_sql_file "/usr/share/doc/zabbix-server-oracle/create.sql.gz"
@@ -528,9 +419,8 @@ prepare_db() {
     echo "** Preparing database"
 
     check_variables_oracle
-    # check_db_connect_oracle
-    # create_db_database_oracle
-    # create_db_schema_oracle
+    check_db_connect_oracle
+    create_db_schema_oracle
 }
 
 prepare_server() {
