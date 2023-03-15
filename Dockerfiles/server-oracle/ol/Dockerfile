@@ -35,13 +35,14 @@ COPY --from=builder ["/tmp/zabbix-${ZBX_VERSION}/database/oracle/create_server.s
 COPY ["conf/etc/", "/etc/"]
 
 RUN set -eux && \
-    INSTALL_PKGS="fping \
+    INSTALL_PKGS=" \
+            # fping \
+            # iputils \
             file-libs \
             tini \
             sudo \
             traceroute \
             nmap \
-            iputils \
             tzdata \
             traceroute \
             libevent \
@@ -57,7 +58,6 @@ RUN set -eux && \
             oracle-instantclient-basic \
             oracle-instantclient-sqlplus \
             unixODBC" && \
-    # microdnf module enable postgresql:13 && \
     microdnf -y install \
             --disablerepo="*" \
             --enablerepo="ol8_baseos_latest" \
