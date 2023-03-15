@@ -87,7 +87,7 @@ services:
    com.zabbix.dbtype: "oracle"
    com.zabbix.os: "oracle linux"
 
-  zabbix-web-nginx-oracle:
+ zabbix-web-nginx-oracle:
   build:
    context: ./Dockerfiles/web-nginx-oracle/ol
    cache_from:
@@ -98,6 +98,8 @@ services:
   ports:
    - "80:8080"
    - "443:8443"
+  links:
+   - zabbix-server:zabbix-server
   volumes:
    - /etc/localtime:/etc/localtime:ro
    - /etc/timezone:/etc/timezone:ro
@@ -148,18 +150,14 @@ services:
    com.zabbix.os: "oracle linux"
 
  zabbix-agent:
-  build:
-   context: ./Dockerfiles/agent/ol
-   cache_from:
-    - oraclelinux:8-slim
-   args:
-    BUILD_BASE_IMAGE: zabbix-build-oracle:ol-6.4.0
-  image: zabbix-agent:ol-6.4.0
+  image: zabbix/zabbix-agent:ol-6.4.0
   profiles:
    - full
    - all
   ports:
    - "10050:10050"
+  links:
+   - zabbix-server:zabbix-server
   volumes:
    - /etc/localtime:/etc/localtime:ro
    - /etc/timezone:/etc/timezone:ro
@@ -180,8 +178,6 @@ services:
    - ./env_vars/.env_agent
   privileged: true
   pid: "host"
-  depends_on:
-   - zabbix-build-oracle
   networks:
    zbx_net_backend:
     aliases:
@@ -195,116 +191,96 @@ services:
    com.zabbix.component: "zabbix-agentd"
    com.zabbix.os: "oracle linux"
 
- zabbix-java-gateway:
-  build:
-   context: ./Dockerfiles/java-gateway/ol
-   cache_from:
-    - oraclelinux:8-slim
-   args:
-    BUILD_BASE_IMAGE: zabbix-build-oracle:ol-6.4.0
-  image: zabbix-java-gateway:ol-6.4.0
-  profiles:
-   - full
-   - all
-  ports:
-   - "10052:10052"
-  deploy:
-   resources:
-    limits:
-      cpus: '0.5'
-      memory: 512M
-    reservations:
-      cpus: '0.25'
-      memory: 256M
-  env_file:
-   - ./env_vars/.env_java
-  depends_on:
-   - zabbix-build-oracle
-  networks:
-   zbx_net_backend:
-    aliases:
-     - zabbix-java-gateway
-     - zabbix-java-gateway-ol
-  stop_grace_period: 5s
-  labels:
-   com.zabbix.description: "Zabbix Java Gateway"
-   com.zabbix.company: "Zabbix LLC"
-   com.zabbix.component: "java-gateway"
-   com.zabbix.os: "oracle linux"
+#  zabbix-java-gateway:
+#   image: zabbix/zabbix-java-gateway:ol-6.4.0
+#   profiles:
+#    - full
+#    - all
+#   ports:
+#    - "10052:10052"
+#   deploy:
+#    resources:
+#     limits:
+#       cpus: '0.5'
+#       memory: 512M
+#     reservations:
+#       cpus: '0.25'
+#       memory: 256M
+#   env_file:
+#    - ./env_vars/.env_java
+#   networks:
+#    zbx_net_backend:
+#     aliases:
+#      - zabbix-java-gateway
+#      - zabbix-java-gateway-ol
+#   stop_grace_period: 5s
+#   labels:
+#    com.zabbix.description: "Zabbix Java Gateway"
+#    com.zabbix.company: "Zabbix LLC"
+#    com.zabbix.component: "java-gateway"
+#    com.zabbix.os: "oracle linux"
 
- zabbix-snmptraps:
-  build:
-   context: ./Dockerfiles/snmptraps/ol
-   cache_from:
-    - oraclelinux:8-slim
-  image: zabbix-snmptraps:ol-6.4.0
-  profiles:
-   - full
-   - all
-  ports:
-   - "162:1162/udp"
-  volumes:
-   - snmptraps:/var/lib/zabbix/snmptraps:rw
-  deploy:
-   resources:
-    limits:
-      cpus: '0.5'
-      memory: 256M
-    reservations:
-      cpus: '0.25'
-      memory: 128M
-  networks:
-   zbx_net_frontend:
-    aliases:
-     - zabbix-snmptraps
-   zbx_net_backend:
-  stop_grace_period: 5s
-  labels:
-   com.zabbix.description: "Zabbix snmptraps"
-   com.zabbix.company: "Zabbix LLC"
-   com.zabbix.component: "snmptraps"
-   com.zabbix.os: "oracle linux"
+#  zabbix-snmptraps:
+#   image: zabbix/zabbix-snmptraps:ol-6.4.0
+#   profiles:
+#    - full
+#    - all
+#   ports:
+#    - "162:1162/udp"
+#   volumes:
+#    - snmptraps:/var/lib/zabbix/snmptraps:rw
+#   deploy:
+#    resources:
+#     limits:
+#       cpus: '0.5'
+#       memory: 256M
+#     reservations:
+#       cpus: '0.25'
+#       memory: 128M
+#   networks:
+#    zbx_net_frontend:
+#     aliases:
+#      - zabbix-snmptraps
+#    zbx_net_backend:
+#   stop_grace_period: 5s
+#   labels:
+#    com.zabbix.description: "Zabbix snmptraps"
+#    com.zabbix.company: "Zabbix LLC"
+#    com.zabbix.component: "snmptraps"
+#    com.zabbix.os: "oracle linux"
 
- zabbix-web-service:
-  build:
-   context: ./Dockerfiles/web-service/ol
-   cache_from:
-    - oraclelinux:8-slim
-   args:
-    BUILD_BASE_IMAGE: zabbix-build-oracle:ol-6.4.0
-  image: zabbix-web-service:ol-6.4.0
-  profiles:
-   - full
-   - all
-  ports:
-   - "10053:10053"
-  volumes:
-   - ./zbx_env/var/lib/zabbix/enc:/var/lib/zabbix/enc:ro
-  security_opt:
-   - seccomp:./env_vars/chrome_dp.json
-  deploy:
-   resources:
-    limits:
-      cpus: '0.5'
-      memory: 512M
-    reservations:
-      cpus: '0.25'
-      memory: 256M
-  env_file:
-   - ./env_vars/.env_web_service
-  depends_on:
-   - zabbix-build-oracle
-  networks:
-   zbx_net_backend:
-    aliases:
-     - zabbix-web-service
-     - zabbix-web-service-ol
-  stop_grace_period: 5s
-  labels:
-   com.zabbix.description: "Zabbix web service"
-   com.zabbix.company: "Zabbix LLC"
-   com.zabbix.component: "web-service"
-   com.zabbix.os: "oracle linux"
+#  zabbix-web-service:
+#   image: zabbix/zabbix-web-service:ol-6.4.0
+#   profiles:
+#    - full
+#    - all
+#   ports:
+#    - "10053:10053"
+#   volumes:
+#    - ./zbx_env/var/lib/zabbix/enc:/var/lib/zabbix/enc:ro
+#   security_opt:
+#    - seccomp:./env_vars/chrome_dp.json
+#   deploy:
+#    resources:
+#     limits:
+#       cpus: '0.5'
+#       memory: 512M
+#     reservations:
+#       cpus: '0.25'
+#       memory: 256M
+#   env_file:
+#    - ./env_vars/.env_web_service
+#   networks:
+#    zbx_net_backend:
+#     aliases:
+#      - zabbix-web-service
+#      - zabbix-web-service-ol
+#   stop_grace_period: 5s
+#   labels:
+#    com.zabbix.description: "Zabbix web service"
+#    com.zabbix.company: "Zabbix LLC"
+#    com.zabbix.component: "web-service"
+#    com.zabbix.os: "oracle linux"
 
 # elasticsearch:
 #  image: elasticsearch
